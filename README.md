@@ -56,3 +56,10 @@ sequenceDiagram
 - [ ] YouTube upload
 - [ ] Database config and storing
 - [ ] retriever file base on metadata
+
+
+- [ ] Clean code
+- [ ] Better Examples
+- [ ] All edge cases 
+- [ ] Security
+- [ ] Optimization (Threads)
