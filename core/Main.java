@@ -21,20 +21,20 @@ public static byte[] fileEncryption(byte[] fileContent, String secretKey){
     return fileContent;
 }
 
-public static void createVideo(byte[] fileContent, int width, int height, String outputPath, int freamRate) throws IOException{
+public static void createVideo(byte[] fileContent, int width, int height, String outputPath, int frameRate) throws IOException{
 
 
-    final int bytesInOneFream = width * height / 8;
-    final int totalFreams = (int)Math.ceil((double)fileContent.length / bytesInOneFream);
+    final int bytesInOneFrame = width * height / 8;
+    final int totalFrames = (int)Math.ceil((double)fileContent.length / bytesInOneFrame);
     int byteIndex = 0;
 
     File video = new File(outputPath);
-    AWTSequenceEncoder encoder = AWTSequenceEncoder.createSequenceEncoder(video, freamRate);
+    AWTSequenceEncoder encoder = AWTSequenceEncoder.createSequenceEncoder(video, frameRate);
     encoder.encodeImage(createMetadataFrame(fileContent.length, width, height));
 
-    for(int i = 0; i < totalFreams; i++){
-        BufferedImage image = createFream(fileContent, byteIndex, width, height);
-        byteIndex += bytesInOneFream;
+    for(int i = 0; i < totalFrames; i++){
+        BufferedImage image = createFrame(fileContent, byteIndex, width, height);
+        byteIndex += bytesInOneFrame;
         encoder.encodeImage(image);
     }
 
@@ -56,7 +56,7 @@ public static BufferedImage createMetadataFrame(int totalBytes, int width, int h
 
 }
 
-public static BufferedImage createFream(byte[] fileContent, int byteIndex, int width, int height){
+public static BufferedImage createFrame(byte[] fileContent, int byteIndex, int width, int height){
     BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY);
     for (int i = 0; i < height  ; i++){
         for (int j = 0; j < width; j += 8){
@@ -85,12 +85,12 @@ void main() {
 
         final String outputPath = "outputs/abc.mp4";
         final String secretKey = "abc123";
-        final int freamRate = 24;
+        final int frameRate = 24;
         final int width = 1920;
         final int height = 1072;
 
 
-        createVideo(fileEncryption(getBytesArrayFromFile(filePath), secretKey), width, height, outputPath, freamRate);
+        createVideo(fileEncryption(getBytesArrayFromFile(filePath), secretKey), width, height, outputPath, frameRate);
 
     }catch (Exception e){
         System.out.println("Error : " + e);

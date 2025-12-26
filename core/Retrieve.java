@@ -10,7 +10,7 @@ import java.util.Arrays;
 
 public class Retrieve {
 
-    static void getFreams(String inputVideoPath, String outputFilePath) throws IOException, JCodecException, FileNotFoundException {
+    static void getFrames(String inputVideoPath, String outputFilePath) throws IOException, JCodecException, FileNotFoundException {
         File file = new File(inputVideoPath);
         FrameGrab grab = FrameGrab.createFrameGrab(NIOUtils.readableChannel(file));
 
@@ -21,7 +21,7 @@ public class Retrieve {
         int totalBytes = getMetadataFromFrame(picture);
         while (null != (picture = grab.getNativeFrame())) {
 
-            freamToByteArray(picture, bos, totalBytes);
+            frameToByteArray(picture, bos, totalBytes);
 
         }
         bos.flush();
@@ -45,7 +45,7 @@ public class Retrieve {
         return totalBytes;
     }
 
-    static void freamToByteArray(Picture picture, BufferedOutputStream bos, int totalBytes) throws IOException {
+    static void frameToByteArray(Picture picture, BufferedOutputStream bos, int totalBytes) throws IOException {
         BufferedImage frame = AWTUtil.toBufferedImage(picture);
         final int height = frame.getHeight();
         final int width = frame.getWidth();
@@ -86,7 +86,7 @@ public class Retrieve {
             final int width = 1920;
             final int height = 1080;
 
-            getFreams(inputVideoPath, outputFilePath);
+            getFrames(inputVideoPath, outputFilePath);
 
 
         } catch (Exception e) {
