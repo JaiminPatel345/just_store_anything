@@ -1,32 +1,42 @@
 package com.jaimin.justStore.utils;
 
+import org.jcodec.api.awt.AWTSequenceEncoder;
+
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import org.jcodec.api.awt.AWTSequenceEncoder;
+import java.nio.file.Files;
 
 
 public class CreateVideoUtil {
 
 
-    public static void createVideo(byte[] fileContent, int width, int height, int frameRate, String outputPath) throws IOException {
+    public static byte[] createVideo(byte[] fileContent, int width, int height, int frameRate) throws IOException {
 
 
         final int bytesInOneFrame = width * height / 8;
         final int totalFrames = (int) Math.ceil((double) fileContent.length / bytesInOneFrame);
         int byteIndex = 0;
 
-        File video = new File(outputPath);
-        AWTSequenceEncoder encoder = AWTSequenceEncoder.createSequenceEncoder(video, frameRate);
-        encoder.encodeImage(createMetadataFrame(fileContent.length, width, height));
+        File tempVideoFile = File.createTempFile("video_", ".mp4");
+        tempVideoFile.deleteOnExit();
 
-        for (int i = 0; i < totalFrames; i++) {
-            BufferedImage image = createFrame(fileContent, byteIndex, width, height);
-            byteIndex += bytesInOneFrame;
-            encoder.encodeImage(image);
+        try {
+            AWTSequenceEncoder encoder = AWTSequenceEncoder.createSequenceEncoder(tempVideoFile, frameRate);
+            encoder.encodeImage(createMetadataFrame(fileContent.length, width, height));
+
+            for (int i = 0; i < totalFrames; i++) {
+                BufferedImage image = createFrame(fileContent, byteIndex, width, height);
+                byteIndex += bytesInOneFrame;
+                encoder.encodeImage(image);
+            }
+
+            encoder.finish();
+
+            return Files.readAllBytes(tempVideoFile.toPath());
+        } finally {
+            tempVideoFile.delete();
         }
-
-        encoder.finish();
 
     }
 

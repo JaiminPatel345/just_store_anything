@@ -58,14 +58,13 @@ public class FileService {
         final int width = 1920;
         final int frameRate = 24;
         final int height = 1072;
-        final String tempOutputPath = "/tmp/jaimin.mp4";
-        CreateVideoUtil.createVideo(fileBytes, width, height, frameRate, tempOutputPath);
+        byte[] videoBytes = CreateVideoUtil.createVideo(fileBytes, width, height, frameRate);
 
 
         //just checking
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .build();
+                .body(videoBytes);
 
     }
 }
