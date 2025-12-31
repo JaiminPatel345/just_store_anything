@@ -1,5 +1,7 @@
 package com.jaimin.justStore.service;
 
+import com.jaimin.justStore.dto.FileDetailResponseDto;
+import com.jaimin.justStore.dto.FileSearchResponseDto;
 import com.jaimin.justStore.dto.UploadFileRequestDto;
 import com.jaimin.justStore.enums.Status;
 import com.jaimin.justStore.model.File;
@@ -19,7 +21,12 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class FileService {
@@ -31,6 +38,86 @@ public class FileService {
     public FileService(FileRepository fileRepository, YouTubeAuthService youTubeAuthService) {
         this.fileRepository = fileRepository;
         this.youTubeAuthService = youTubeAuthService;
+    }
+
+    /**
+     * Get all files as search response DTOs (user-friendly format).
+     */
+    public List<FileSearchResponseDto> getAllFiles() {
+        return fileRepository.findAllByOrderByCreatedAtDesc()
+                .stream()
+                .map(this::toSearchResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Search files with optional filters.
+     */
+    public List<FileSearchResponseDto> searchFiles(String fileName, String tag, 
+                                                    LocalDate startDate, LocalDate endDate) {
+        LocalDateTime startDateTime = startDate != null ? startDate.atStartOfDay() : null;
+        LocalDateTime endDateTime = endDate != null ? endDate.atTime(LocalTime.MAX) : null;
+        
+        return fileRepository.searchFiles(fileName, tag, startDateTime, endDateTime)
+                .stream()
+                .map(this::toSearchResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get full file details by ID.
+     */
+    public FileDetailResponseDto getFileById(Long id) {
+        File file = fileRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "File not found with id: " + id));
+        return toDetailResponseDto(file);
+    }
+
+    /**
+     * Get full file details by YouTube Video ID.
+     */
+    public FileDetailResponseDto getFileByYoutubeVideoId(String youtubeVideoId) {
+        File file = fileRepository.findByYoutubeVideoId(youtubeVideoId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "File not found with YouTube video ID: " + youtubeVideoId));
+        return toDetailResponseDto(file);
+    }
+
+    /**
+     * Convert File entity to FileSearchResponseDto (user-friendly).
+     */
+    private FileSearchResponseDto toSearchResponseDto(File file) {
+        return new FileSearchResponseDto(
+                file.getId(),
+                file.getOriginalFileName(),
+                FileSearchResponseDto.formatFileSize(file.getOriginalFileSizeInByte()),
+                file.getOriginalFileSizeInByte(),
+                file.getOriginalFileType(),
+                file.getTags(),
+                file.getStatus().name(),
+                file.getCreatedAt()
+        );
+    }
+
+    /**
+     * Convert File entity to FileDetailResponseDto (full details).
+     */
+    private FileDetailResponseDto toDetailResponseDto(File file) {
+        return new FileDetailResponseDto(
+                file.getId(),
+                file.getOriginalFileName(),
+                FileSearchResponseDto.formatFileSize(file.getOriginalFileSizeInByte()),
+                file.getOriginalFileSizeInByte(),
+                file.getOriginalFileType(),
+                file.getTags(),
+                file.getYoutubeVideoId(),
+                file.getYoutubeVideoUrl(),
+                file.getStatus().name(),
+                file.getSecretKeyHash() != null,
+                file.getCreatedAt(),
+                file.getUpdatedAt()
+        );
     }
 
     public ResponseEntity<?> uploadFile(UploadFileRequestDto uploadRequest) throws IOException {
@@ -175,3 +262,4 @@ public class FileService {
                 .body(fileBytes);
     }
 }
+
