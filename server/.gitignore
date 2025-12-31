@@ -33,3 +33,6 @@ build/
 .vscode/
 
 .env
+
+# Google cloud secrets
+client_secret_*
