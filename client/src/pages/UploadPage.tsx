@@ -3,14 +3,15 @@ import { useDropzone } from 'react-dropzone';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../store';
 import { uploadFile, resetState } from '../store/fileSlice';
-import { UploadCloud, File, X, CheckCircle, Loader2 } from 'lucide-react';
+import { UploadCloud, File, X, CheckCircle, Loader2, AlertTriangle } from 'lucide-react';
 import clsx from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const UploadPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { uploading, uploadSuccess, error } = useSelector((state: RootState) => state.file);
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [encryptFile, setEncryptFile] = useState(false);
   const [secretKey, setSecretKey] = useState('');
 
@@ -24,13 +25,16 @@ const UploadPage: React.FC = () => {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     multiple: false,
-    disabled: uploading
+    disabled: uploading || !isAuthenticated
   });
 
   const handleUpload = () => {
+    if (!isAuthenticated) {
+      alert("Please connect your YouTube account first.");
+      return;
+    }
     if (selectedFile) {
       if (encryptFile && !secretKey) {
-          // Simple validation: if encryption is checked, key is required.
           alert("Please enter a secret key.");
           return;
       }
@@ -53,13 +57,28 @@ const UploadPage: React.FC = () => {
         <p className="text-gray-400">Convert your files into video format for secure storage.</p>
       </div>
 
+      {/* Auth Warning */}
+      {!isAuthenticated && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30 flex items-center gap-3"
+        >
+          <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0" />
+          <div>
+            <p className="text-yellow-400 font-medium">YouTube Not Connected</p>
+            <p className="text-yellow-400/70 text-sm">Please connect your YouTube account above to upload files.</p>
+          </div>
+        </motion.div>
+      )}
+
       <div className="space-y-6">
         <div
           {...getRootProps()}
           className={clsx(
             'relative border-2 border-dashed rounded-xl p-12 transition-all duration-300 ease-in-out cursor-pointer',
             isDragActive ? 'border-blue-500 bg-blue-500/10' : 'border-gray-700 hover:border-gray-500',
-            uploading ? 'opacity-50 cursor-not-allowed' : '',
+            (uploading || !isAuthenticated) ? 'opacity-50 cursor-not-allowed' : '',
             'bg-[#242424]'
           )}
         >
@@ -150,10 +169,10 @@ const UploadPage: React.FC = () => {
         <div className="flex justify-end">
           <button
             onClick={handleUpload}
-            disabled={!selectedFile || uploading || uploadSuccess}
+            disabled={!selectedFile || uploading || uploadSuccess || !isAuthenticated}
             className={clsx(
               "px-6 py-2.5 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2",
-              !selectedFile || uploading || uploadSuccess
+              !selectedFile || uploading || uploadSuccess || !isAuthenticated
                 ? "bg-gray-800 text-gray-500 cursor-not-allowed"
                 : "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20"
             )}
