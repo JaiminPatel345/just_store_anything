@@ -1,5 +1,6 @@
 package com.jaimin.justStore.controller;
 
+import com.jaimin.justStore.dto.DownloadFileResponseDto;
 import com.jaimin.justStore.dto.FileDetailResponseDto;
 import com.jaimin.justStore.dto.FileSearchResponseDto;
 import com.jaimin.justStore.dto.UploadFileRequestDto;
@@ -83,23 +84,19 @@ public class FileController {
         }
     }
 
-    /**
-     * Get original file bytes by video path (for download).
-     */
-    @GetMapping("/file")
-    public ResponseEntity<?> getFile(
-            //TODO: replace with DTO
-            @RequestParam
-            String videoPath //this is temp and for development
-    ){
-        try{
-            return fileService.getFile(videoPath);
-        }catch (Exception ex) {
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", ex.getLocalizedMessage()));
-        }
+
+    @GetMapping("/download/{videoId}")
+    public ResponseEntity<?> downloadFile(
+            @PathVariable Long videoId,
+            @RequestParam(required = false) String secretKey
+    ) {
+
+        DownloadFileResponseDto responseDto = fileService.downloadFile(videoId, secretKey);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(responseDto);
     }
+
 
 }
 

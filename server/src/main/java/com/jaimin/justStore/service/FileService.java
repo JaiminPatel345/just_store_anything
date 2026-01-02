@@ -1,17 +1,13 @@
 package com.jaimin.justStore.service;
 
+import com.jaimin.justStore.dto.DownloadFileResponseDto;
 import com.jaimin.justStore.dto.FileDetailResponseDto;
 import com.jaimin.justStore.dto.FileSearchResponseDto;
 import com.jaimin.justStore.dto.UploadFileRequestDto;
 import com.jaimin.justStore.enums.Status;
 import com.jaimin.justStore.model.File;
 import com.jaimin.justStore.repository.FileRepository;
-import com.jaimin.justStore.utils.ChecksumUtil;
-import com.jaimin.justStore.utils.CreateVideoUtil;
-import com.jaimin.justStore.utils.HashUtil;
-import com.jaimin.justStore.utils.RetrieveVideo;
-import com.jaimin.justStore.utils.YouTubeApi;
-import org.jcodec.api.JCodecException;
+import com.jaimin.justStore.utils.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -20,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.GeneralSecurityException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -53,11 +50,11 @@ public class FileService {
     /**
      * Search files with optional filters.
      */
-    public List<FileSearchResponseDto> searchFiles(String fileName, String tag, 
-                                                    LocalDate startDate, LocalDate endDate) {
+    public List<FileSearchResponseDto> searchFiles(String fileName, String tag,
+                                                   LocalDate startDate, LocalDate endDate) {
         LocalDateTime startDateTime = startDate != null ? startDate.atStartOfDay() : null;
         LocalDateTime endDateTime = endDate != null ? endDate.atTime(LocalTime.MAX) : null;
-        
+
         return fileRepository.searchFiles(fileName, tag, startDateTime, endDateTime)
                 .stream()
                 .map(this::toSearchResponseDto)
@@ -118,6 +115,51 @@ public class FileService {
                 file.getCreatedAt(),
                 file.getUpdatedAt()
         );
+    }
+
+    public DownloadFileResponseDto downloadFile(Long videoId, String secretKey) {
+        File file = fileRepository.findById(videoId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "File not found with id: " + videoId));
+
+        if (file.getSecretKeyHash() != null) {
+            // File is encrypted, secret key is required
+            if (secretKey == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED,
+                        "File is encrypted, provide secret key"
+                );
+            }
+
+            String newSecretKeyHash = HashUtil.hash(secretKey);
+            if (!newSecretKeyHash.equals(file.getSecretKeyHash())) {
+                throw new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED,
+                        "Wrong secret key, provide correct secret key"
+                );
+            }
+        }
+
+        try {
+            logger.debug("Came in try catch");
+            InputStream videoStream = YouTubeVideoDownload.downloadVideo(file.getYoutubeVideoUrl());
+
+            //decode
+            byte[] fileContent = RetrieveVideo.decodeVideo(videoStream);
+
+            if (file.getSecretKeyHash() != null) {
+                //TODO: decryption
+            }
+
+            return DownloadFileResponseDto.from(file, fileContent);
+        } catch (Exception e) {
+            logger.error("Error downloading file", e);
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    e.getMessage()
+            );
+        }
+
     }
 
     public ResponseEntity<?> uploadFile(UploadFileRequestDto uploadRequest) throws IOException {
@@ -238,28 +280,6 @@ public class FileService {
                     "Upload failed: " + e.getMessage()
             );
         }
-    }
-
-    public ResponseEntity<?> getFile(String videoPath) throws IOException, JCodecException {
-        if (videoPath == null || videoPath.trim().isEmpty()) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Give correct input video path"
-            );
-        }
-
-        if (!videoPath.endsWith(".mp4")) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Input video path must end with .mp4"
-            );
-        }
-
-        byte[] fileBytes = RetrieveVideo.decodeVideo(videoPath);
-
-        return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(fileBytes);
     }
 }
 
